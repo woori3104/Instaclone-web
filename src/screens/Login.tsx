@@ -10,9 +10,14 @@ import Button from "../components/auth/Button";
 import FormBox from "../components/auth/FormBox";
 import Input from "../components/auth/Input";
 import Separator from "../components/auth/Separator";
-import PageTitle from "../components/PageTitle"; 
+import { logUserIn } from "../apollo";
+//import PageTitle from "../components/PageTitle";
+import FormError from "../components/auth/FormError";
 import routes from "../routes";
-import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { gql, useMutation } from "@apollo/client";
+import { useLocation } from "react-router-dom";
+import React from "react";
 
 const FacebookLogin = styled.div`
   color: #385285;
@@ -21,22 +26,66 @@ const FacebookLogin = styled.div`
     font-weight: 600;
   }
 `;
-
+const LOGIN_MUTATION = gql`
+  mutation login($userName: String!, $password: String!) {
+    login(userName: $userName, password: $password) {
+      ok
+      token
+      error
+    }
+  }
+`;
+const Notification = styled.div`
+  color: #2ecc71;
+`;
 const Login = () => {
-  const [username, setUsername] = useState("");
-  const [usernameError, setUsernameError] = useState("");
-  const onUsernameChange = (event:any) => {
-    setUsernameError("");
-    setUsername(event.target.value);
+  const location = useLocation<{ userName: string; password: string; message: string }>();
+  console.log(location);
+  const {
+    register,
+    handleSubmit,
+    errors,
+    formState,
+    getValues,
+    setError,
+    clearErrors,
+  } = useForm({
+    mode: "onChange",
+    defaultValues: {
+      userName: location?.state?.userName || "",
+      password: location?.state?.password || "",
+      result:  "",
+      message: "",
+    },
+  });
+  const onCompleted = (data: any) => {
+    const {
+      login: { ok, error, token },
+    } = data;
+    if (!ok && error) {
+      setError("result", {
+        message: error,
+      });
+    }
+    if (token) {
+      logUserIn(token);
+    }
   };
-  const handleSubmit = (event:any) => {
-    event.preventDefault();
-    if (username === "") {
-      setUsernameError("Not empty pls.");
+
+  const [login, { loading }] = useMutation(LOGIN_MUTATION, {
+    onCompleted,
+  });
+  const clearLoginError = () => {
+    clearErrors("result");
+  };
+  const onSubmitValid = () => {
+    if (loading) {
+      return;
     }
-    if (username.length < 10) {
-      setUsernameError("too short");
-    }
+    const { userName, password } = getValues();
+    login({
+      variables: { userName, password },
+    });
   };
   return (
     <AuthLayout>
@@ -44,20 +93,33 @@ const Login = () => {
         <div>
           <FontAwesomeIcon icon={faInstagram} size="3x" />
         </div>
-        <form onSubmit={handleSubmit}>
-          {usernameError}
-          <Input
-            onChange={onUsernameChange}
-            value={username}
+        <form onSubmit={ handleSubmit(onSubmitValid)}>
+
+          <Input ref={register({ required: "UserName is required", minLength: {
+                value: 5,
+                message: "Username should be longer than 5 chars.",
+              },})}
+            name="userName"
             type="text"
-            placeholder="Username"
+            placeholder="UserName"
+            onChange={clearLoginError}
+            hasError={Boolean(errors?.userName?.message)}
+            required
           />
-          <Input type="password" placeholder="Password" />
-           <Button
+          <Input ref={register({ required : "password is required",})}
+            name="password"
+            type="password"
+            placeholder="Password"
+            hasError={Boolean(errors?.password?.message)}
+            onChange={clearLoginError}
+            required/>
+          <FormError message={errors?.password?.message|| ''} />
+          <Button
             type="submit"
-            value="Log in"
-            disabled={username === "" && username.length < 10}
+            value={loading ? "Loading..." : "Log in"}
+            disabled={!formState.isValid || loading}
           />
+          <FormError message={errors?.result?.message|| ''} />
         </form>
         <Separator />
         <FacebookLogin>
@@ -74,3 +136,4 @@ const Login = () => {
   );
 }
 export default Login;
+

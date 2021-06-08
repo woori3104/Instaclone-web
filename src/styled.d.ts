@@ -1,4 +1,5 @@
 import 'styled-components';
+import { boolean } from 'yargs';
 
 declare module 'styled-components' {
     export interface DefaultTheme {
@@ -7,4 +8,6 @@ declare module 'styled-components' {
         borderColor: string;
         accent: string;
     }
+    
 }
+export default hasError;
