@@ -17,7 +17,6 @@ import routes from "../routes";
 import { useForm } from "react-hook-form";
 import { gql, useMutation } from "@apollo/client";
 import { useLocation } from "react-router-dom";
-import React from "react";
 
 const FacebookLogin = styled.div`
   color: #385285;
@@ -34,9 +33,6 @@ const LOGIN_MUTATION = gql`
       error
     }
   }
-`;
-const Notification = styled.div`
-  color: #2ecc71;
 `;
 const Login = () => {
   const location = useLocation<{ userName: string; password: string; message: string }>();
